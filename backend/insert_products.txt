@@ -1,0 +1,63 @@
+-- Insert Categories
+INSERT INTO categories (name, description, parent_category, created_at, updated_at) VALUES
+('Sewing Supplies', 'Essential items for all your sewing needs, from needles to thread.', NULL, NOW(), NOW()),
+('Tailoring Tools', 'Professional tools for precise cutting, measuring, and marking in tailoring.', NULL, NOW(), NOW()),
+('Fabrics', 'A wide selection of fabrics for various projects, including cotton, linen, and denim.', NULL, NOW(), NOW()),
+('Notions & Accessories', 'Small but essential items like zippers, buttons, and elastic bands to complete your sewing projects.', NULL, NOW(), NOW()),
+('Embroidery Supplies', 'Everything you need for beautiful embroidery, including hoops, floss, and kits.', NULL, NOW(), NOW()),
+('Sewing Kits & Sets', 'Convenient and comprehensive kits for beginners and for on-the-go mending.', NULL, NOW(), NOW());
+
+-- Add an example subcategory to demonstrate the parent_category field
+-- Assuming 'Fabrics' has a category_id that you can reference.
+-- You might need to replace (SELECT category_id FROM categories WHERE name = 'Fabrics') with the actual ID if needed.
+INSERT INTO categories (name, description, parent_category, created_at, updated_at) VALUES
+('Cotton Blends', 'Various blends of cotton fabric, a subcategory of Fabrics.', (SELECT category_id FROM categories WHERE name = 'Fabrics'), NOW(), NOW());
+
+
+-- Assuming category_id values are auto-incremented starting from 1 for the above categories.
+-- You might need to adjust the category_id values if your database handles them differently.
+
+-- Insert Products
+INSERT INTO products (name, description, price, sku, stock_quantity, category_id, is_available, created_at, updated_at) VALUES
+-- Sewing Supplies (assuming category_id = 1)
+('Sewing Needles (assorted sizes)', 'A pack of assorted sewing needles for various fabric types and hand-sewing tasks.', 5.99, 'SSN001', 100, 1, TRUE, NOW(), NOW()),
+('Spools of Thread (various colors)', 'A set of high-quality polyester thread spools in a variety of vibrant colors.', 12.50, 'SST001', 150, 1, TRUE, NOW(), NOW()),
+('Seam Rippers', 'Ergonomic seam rippers for easily removing stitches without damaging fabric.', 3.25, 'SSR001', 75, 1, TRUE, NOW(), NOW()),
+('Thimbles', 'Protective thimbles for comfortable and safe hand-sewing.', 2.00, 'SSTH001', 80, 1, TRUE, NOW(), NOW()),
+('Needle Threaders', 'Handy needle threaders to simplify threading needles.', 1.50, 'SSNT001', 120, 1, TRUE, NOW(), NOW()),
+
+-- Tailoring Tools (assuming category_id = 2)
+('Fabric Scissors', 'Sharp, durable fabric scissors for clean and precise cuts.', 18.99, 'TTFS001', 60, 2, TRUE, NOW(), NOW()),
+('Measuring Tapes', 'Flexible measuring tapes for accurate body and fabric measurements.', 4.50, 'TTMT001', 90, 2, TRUE, NOW(), NOW()),
+('Tailor’s Chalk', 'Assorted colors of tailor’s chalk for temporary fabric markings.', 6.75, 'TTTC001', 110, 2, TRUE, NOW(), NOW()),
+('Dressmaker Pins', 'Box of rust-proof dressmaker pins for holding fabric pieces together.', 4.00, 'TTDP001', 130, 2, TRUE, NOW(), NOW()),
+('Rotary Cutters', 'Precision rotary cutters for fast and accurate fabric cutting, especially with cutting mats.', 25.00, 'TTRC001', 40, 2, TRUE, NOW(), NOW()),
+
+-- Fabrics (assuming category_id = 3)
+('Cotton Fabric', 'Soft, breathable 100% cotton fabric, ideal for clothing and crafts (per yard).', 7.99, 'FBF001', 200, 3, TRUE, NOW(), NOW()),
+('Linen Fabric', 'Natural, durable linen fabric with a beautiful drape (per yard).', 10.50, 'FBL001', 180, 3, TRUE, NOW(), NOW()),
+('Denim', 'Sturdy denim fabric, perfect for jeans, jackets, and bags (per yard).', 14.00, 'FBD001', 150, 3, TRUE, NOW(), NOW()),
+('Silk Blend', 'Luxurious silk blend fabric for elegant garments (per yard).', 22.00, 'FBSB001', 90, 3, TRUE, NOW(), NOW()),
+('Polyester', 'Versatile and wrinkle-resistant polyester fabric (per yard).', 6.50, 'FBPL001', 250, 3, TRUE, NOW(), NOW()),
+('Fleece', 'Warm and cozy fleece fabric, great for blankets and activewear (per yard).', 9.00, 'FBF002', 170, 3, TRUE, NOW(), NOW()),
+('Printed Fabric', 'Assorted printed fabrics with various patterns and designs (per yard).', 8.50, 'FBPR001', 220, 3, TRUE, NOW(), NOW()),
+
+-- Notions & Accessories (assuming category_id = 4)
+('Zippers (various sizes and types)', 'Assortment of zippers in different lengths and styles for various projects.', 7.00, 'NAZP001', 100, 4, TRUE, NOW(), NOW()),
+('Buttons (plastic, wood, metal)', 'Mixed pack of buttons in various materials, sizes, and colors.', 9.50, 'NABT001', 110, 4, TRUE, NOW(), NOW()),
+('Elastic Bands', 'Rolls of high-quality elastic bands for waistbands and cuffs.', 5.25, 'NAEB001', 140, 4, TRUE, NOW(), NOW()),
+('Hook and Eye Sets', 'Small hook and eye fasteners for closures on garments and accessories.', 3.00, 'NAHE001', 160, 4, TRUE, NOW(), NOW()),
+('Velcro Strips', 'Self-adhesive Velcro strips for easy and secure closures.', 6.00, 'NAVS001', 95, 4, TRUE, NOW(), NOW()),
+('Bias Tape', 'Rolls of pre-folded bias tape for finishing raw edges and decorative trim.', 4.75, 'NABT002', 120, 4, TRUE, NOW(), NOW()),
+('Interfacing', 'Fusible and sew-in interfacing to add structure and stability to fabrics (per yard).', 11.00, 'NAIF001', 80, 4, TRUE, NOW(), NOW()),
+
+-- Embroidery Supplies (assuming category_id = 5)
+('Embroidery Hoops', 'Wooden and plastic embroidery hoops in various sizes.', 8.00, 'ESEH001', 70, 5, TRUE, NOW(), NOW()),
+('Embroidery Floss', 'Pack of assorted embroidery floss in a wide range of colors.', 15.00, 'ESEF001', 100, 5, TRUE, NOW(), NOW()),
+('Cross-Stitch Kits', 'Beginner-friendly cross-stitch kits with patterns, fabric, and floss.', 20.00, 'ESCK001', 50, 5, TRUE, NOW(), NOW()),
+('Fabric Marking Pens', 'Water-erasable fabric marking pens for temporary design transfers.', 6.00, 'ESFMP001', 85, 5, TRUE, NOW(), NOW()),
+
+-- Sewing Kits & Sets (assuming category_id = 6)
+('Beginner Sewing Kits', 'Comprehensive kits for new sewers, including essential tools and basic notions.', 35.00, 'SKSBK001', 30, 6, TRUE, NOW(), NOW()),
+('Emergency Mending Kits', 'Compact kits for quick repairs on the go.', 10.00, 'SKSEMK001', 60, 6, TRUE, NOW(), NOW()),
+('Travel Sewing Kits', 'Portable sewing kits with mini essentials for travel.', 15.00, 'SKSTSK001', 45, 6, TRUE, NOW(), NOW());
