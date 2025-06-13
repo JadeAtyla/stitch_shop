@@ -33,9 +33,8 @@ class AppUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True) # Changed primary_key to user
 
     first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
-    # email = models.CharField(unique=True, max_length=255) # Removed - managed by Django User
-    # password_hash = models.CharField(max_length=255) # Removed - managed by Django User
     phone = models.CharField(max_length=20, blank=True, null=True)
     role = models.CharField(
         max_length=10,
@@ -51,7 +50,7 @@ class AppUser(models.Model):
         verbose_name_plural = 'AppUsers'
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.user.username})" # Use user.username or user.email
+        return f"{self.first_name or ""} {self.last_name or ""} ({self.user.username or ""})" # Use user.username or user.email
 
 class Categories(models.Model):
     category_id = models.AutoField(primary_key=True)
@@ -67,7 +66,7 @@ class Categories(models.Model):
         verbose_name_plural = 'Categories'
 
     def __str__(self):
-        return self.name
+        return self.name or ""
 
 
 class Address(models.Model):
@@ -94,7 +93,7 @@ class Address(models.Model):
         verbose_name_plural = 'Addresses'
 
     def __str__(self):
-        return f"{self.building_house_no} {self.street_name}, {self.barangay}, {self.city_municipality}, {self.province}"
+        return f"{self.building_house_no or ""} {self.street_name or ""}, {self.barangay or ""}, {self.city_municipality or ""}, {self.province or ""}"
 
 
 class ShoppingCarts(models.Model):
@@ -110,7 +109,7 @@ class ShoppingCarts(models.Model):
         verbose_name_plural = 'Shopping Carts'
 
     def __str__(self):
-        return f"Shopping Cart for {self.user.user.username}" # Access Django User's username
+        return f"Shopping Cart for {self.user.user.username or ""}" # Access Django User's username
 
 
 class Products(models.Model):
@@ -133,7 +132,7 @@ class Products(models.Model):
         verbose_name_plural = 'Products'
 
     def __str__(self):
-        return self.name
+        return self.name or ""
 
 
 class Orders(models.Model):
@@ -186,7 +185,7 @@ class Payments(models.Model):
         verbose_name_plural = 'Payments'
 
     def __str__(self):
-        return f"Payment {self.payment_id} - {self.payment_status} for {self.amount}"
+        return f"Payment {self.payment_id or ""} - {self.payment_status or ""} for {self.amount or ""}"
 
 
 class CartItems(models.Model):
@@ -202,7 +201,7 @@ class CartItems(models.Model):
         unique_together = (('cart', 'product'),)
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} in Cart {self.cart.cart_id}"
+        return f"{self.quantity or "0"} x {self.product.name or "0"} in Cart {self.cart.cart_id or "0"}"
 
 
 class OrderItems(models.Model):
@@ -221,4 +220,4 @@ class OrderItems(models.Model):
         verbose_name_plural = 'Order Items'
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} for Order {self.order.order_id}"
+        return f"{self.quantity or "0"} x {self.product.name or "0"} for Order {self.order.order_id or "0"}"

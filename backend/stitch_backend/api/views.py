@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter # Import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
+from rest_framework.views import APIView
 
 from .serializers import (
     UserSerializer, AppUserSerializer, CategoriesSerializer, AddressSerializer,
@@ -28,6 +29,7 @@ class IsOwnerOrAdmin(IsAuthenticated):
         if request.user.is_superuser or request.user.is_staff:
             return True
         if isinstance(obj, AppUser):
+            print("Object: ", obj.user, " Request: ")
             return obj.user == request.user
         if hasattr(obj, 'user') and hasattr(obj.user, 'user'):
             return obj.user.user == request.user
@@ -273,3 +275,19 @@ class OrderItemRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
             if obj.order.user.user != self.request.user:
                 self.permission_denied(self.request, message="You do not have permission to access this order item.")
         return obj
+
+class ProtectedView(APIView):
+    """
+    A simple protected API endpoint that requires authentication.
+    Returns a success message if the user is authenticated.
+    """
+    permission_classes = [IsAuthenticated] # Explicitly requires an authenticated user
+
+    def get(self, request, *args, **kwargs):
+        # Access the authenticated user through request.user
+        user_id = request.user.id
+        username = request.user.username
+        return Response(
+            {"message": f"Welcome, {username}! You have accessed a protected route.", "user_id": user_id},
+            status=status.HTTP_200_OK
+        )

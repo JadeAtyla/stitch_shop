@@ -17,7 +17,7 @@ class AppUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser
         # Include 'user_id', 'username', 'email' for clarity
-        fields = ["user_id", "username", "email", "first_name", "last_name", "phone", "role", "created_at", "updated_at"]
+        fields = ["user_id", "username", "email", "first_name", "middle_name", "last_name", "phone", "role", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"] # These are auto_now_add/auto_now
 
     # We don't need a create method here if AppUser is created after User
@@ -29,18 +29,21 @@ class AppUserSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     # Fields for Django User registration
     first_name = serializers.CharField(write_only=True, required=False)
+    middle_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
     phone = serializers.CharField(write_only=True, required=False)
-    role = serializers.ChoiceField(choices=UserRole.choices, write_only=True, default=UserRole.USER)
+    role = serializers.ChoiceField(choices=UserRole.choices, read_only=True, default=UserRole.USER)
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "password", "first_name", "last_name", "phone", "role"]
-        extra_kwargs = {"password": {"write_only": True}}
+        fields = ["id", "username", "email", "password", "first_name", "middle_name", "last_name", "phone", "role"]
+        extra_kwargs = {"password": {"write_only": True}
+                        }
 
     def create(self, validated_data):
         # Extract AppUser specific data
         first_name = validated_data.pop('first_name', '')
+        middle_name = validated_data.pop('middle_name', '')
         last_name = validated_data.pop('last_name', '')
         phone = validated_data.pop('phone', '')
         role = validated_data.pop('role', UserRole.USER)
@@ -52,6 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
         AppUser.objects.create(
             user=user,
             first_name=first_name,
+            middle_name=middle_name,
             last_name=last_name,
             phone=phone,
             role=role

@@ -14,9 +14,10 @@ from api.views import (
     OrderListCreate, OrderRetrieveUpdateDestroy,
     PaymentListCreate, PaymentRetrieveUpdateDestroy,
     CartItemListCreate, CartItemRetrieveUpdateDestroy,
-    OrderItemListCreate, OrderItemRetrieveUpdateDestroy,
+    OrderItemListCreate, OrderItemRetrieveUpdateDestroy, 
+    ProtectedView,
 )
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -53,4 +54,7 @@ urlpatterns = [
 
     path("api/orderitems/", OrderItemListCreate.as_view(), name="orderitem-list-create"),
     path("api/orderitems/<int:order_item_id>/", OrderItemRetrieveUpdateDestroy.as_view(), name="orderitem-detail"),
+
+    path("api/protected-route/", ProtectedView.as_view(), name="protected-route"),
+    path("api/auth/logout/", TokenBlacklistView.as_view(), name="blacklist_token"),
 ]
