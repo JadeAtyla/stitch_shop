@@ -60,7 +60,16 @@ or
 python manage.py migrate
 ```
 
-10. Run django server:
+10. Create superuser:
+```bash
+py manage.py createsuperuser
+```
+or
+```bash
+python manage.py createsuperuser
+```
+
+11. Run django server:
 ```bash
 py manage.py runserver
 ```
