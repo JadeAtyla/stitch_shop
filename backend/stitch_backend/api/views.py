@@ -4,9 +4,21 @@ from django.contrib.auth.models import User
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter # Import SearchFilter
-from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
+from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+
+# Revert to standard Simple JWT views that return tokens in the response body
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.tokens import RefreshToken # Still needed for blacklisting on logout
+
+from django.contrib.auth import logout as django_logout # Still useful for session logout if SessionAuth is active
+
+from django.conf import settings
+SIMPLE_JWT = settings.SIMPLE_JWT # Keep loading SIMPLE_JWT for settings like BLACKLIST_AFTER_ROTATION
+
 
 from .serializers import (
     UserSerializer, AppUserSerializer, CategoriesSerializer, AddressSerializer,
@@ -17,7 +29,7 @@ from .models import (
     AppUser, Categories, Address, ShoppingCarts, Products,
     Orders, Payments, CartItems, OrderItems
 )
-from .filters import ( # NEW: Import all your filter classes
+from .filters import (
     AppUserFilter, CategoryFilter, ProductFilter, OrderFilter,
     CartItemFilter, AddressFilter, PaymentFilter, OrderItemFilter
 )
@@ -39,22 +51,92 @@ class IsOwnerOrAdmin(IsAuthenticated):
             return obj.order.user.user == request.user
         return False
 
+class CustomPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
-# Auth Views (Remains the same)
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'total_pages': self.page.paginator.num_pages,
+            'results': data
+        })
+
+
+# Auth Views
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated] # User must be authenticated to logout
 
-# AppUser Views
+    def post(self, request):
+        try:
+            # For localStorage approach, the frontend sends the refresh token to blacklist
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            # If using Django session authentication alongside JWT
+            django_logout(request)
+
+            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except (KeyError, TokenError):
+            # KeyError if 'refresh' not in request.data, TokenError if token is invalid/blacklisted
+            return Response({"detail": "Invalid token or already logged out."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserDetailView(APIView):
+    """
+    Returns details of the currently authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        app_user = None
+        user_address = []
+        try:
+            app_user = user.appuser # Assuming one-to-one 
+            address = Address.objects.filter(user=app_user)
+            user_address = AddressSerializer(address, many=True).data
+        except AppUser.DoesNotExist and Address.DoesNotExist:
+            pass
+
+        data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email, # Django User's email
+        }
+        if app_user:
+            data.update({
+                'first_name': app_user.first_name,
+                'last_name': app_user.last_name,
+                'middle_name': app_user.middle_name,
+                'phone': app_user.phone,
+                'role': app_user.role,
+                'created_at': app_user.created_at,
+                'updated_at': app_user.updated_at,
+                'address': user_address,
+            })
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# AppUser Views (remaining views are unchanged as they don't depend on token handling method)
 class AppUserListCreate(generics.ListCreateAPIView):
     queryset = AppUser.objects.all()
     serializer_class = AppUserSerializer
-    permission_classes = [IsAdminUser] # Only admins can list all
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = AppUserFilter # NEW
-    search_fields = ['user__username', 'user__email', 'first_name', 'last_name', 'phone'] # NEW
+    permission_classes = [IsAdminUser]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = AppUserFilter
+    search_fields = ['user__username', 'user__email', 'first_name', 'last_name', 'phone']
+
 
 class AppUserRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = AppUser.objects.all()
@@ -67,9 +149,9 @@ class AppUserRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class CategoryListCreate(generics.ListCreateAPIView):
     queryset = Categories.objects.all()
     serializer_class = CategoriesSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = CategoryFilter # NEW
-    search_fields = ['name', 'description'] # NEW
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = CategoryFilter
+    search_fields = ['name', 'description']
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -90,9 +172,9 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class AddressListCreate(generics.ListCreateAPIView):
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = AddressFilter # NEW
-    search_fields = ['street_name', 'barangay', 'city_municipality', 'province', 'postal_code'] # NEW
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = AddressFilter
+    search_fields = ['street_name', 'barangay', 'city_municipality', 'province', 'postal_code']
 
     def get_queryset(self):
         try:
@@ -115,7 +197,6 @@ class AddressRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class ShoppingCartListCreate(generics.ListCreateAPIView):
     serializer_class = ShoppingCartsSerializer
     permission_classes = [IsAuthenticated]
-    # No filters/search here typically as it's a one-to-one with user
 
     def get_queryset(self):
         try:
@@ -144,9 +225,9 @@ class ShoppingCartRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class ProductListCreate(generics.ListCreateAPIView):
     queryset = Products.objects.all()
     serializer_class = ProductsSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = ProductFilter # NEW
-    search_fields = ['name', 'description', 'sku', 'category__name'] # NEW
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = ProductFilter
+    search_fields = ['name', 'description', 'sku', 'category__name']
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -167,8 +248,8 @@ class ProductRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class OrderListCreate(generics.ListCreateAPIView):
     serializer_class = OrdersSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend] # NEW: SearchFilter not as relevant for orders
-    filterset_class = OrderFilter # NEW
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = OrderFilter
 
     def get_queryset(self):
         try:
@@ -196,9 +277,8 @@ class PaymentListCreate(generics.ListCreateAPIView):
     queryset = Payments.objects.all()
     serializer_class = PaymentsSerializer
     permission_classes = [IsAdminUser]
-    filter_backends = [DjangoFilterBackend] # NEW
-    filterset_class = PaymentFilter # NEW
-    # SearchFilter less useful for payments unless on transaction_id
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PaymentFilter
 
 class PaymentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Payments.objects.all()
@@ -211,9 +291,10 @@ class PaymentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class CartItemListCreate(generics.ListCreateAPIView):
     serializer_class = CartItemsSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = CartItemFilter # NEW
-    search_fields = ['product__name'] # NEW
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = CartItemFilter
+    search_fields = ['product__name']
+
 
     def get_queryset(self):
         try:
@@ -250,9 +331,10 @@ class CartItemRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class OrderItemListCreate(generics.ListCreateAPIView):
     serializer_class = OrderItemsSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter] # NEW
-    filterset_class = OrderItemFilter # NEW
-    search_fields = ['product__name'] # NEW
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = OrderItemFilter
+    search_fields = ['product__name']
+
 
     def get_queryset(self):
         try:

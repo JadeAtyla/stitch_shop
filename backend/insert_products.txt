@@ -1,5 +1,7 @@
+USE stitchshop;
+
 -- Insert Categories
-INSERT INTO categories (name, description, parent_category, created_at, updated_at) VALUES
+INSERT INTO categories (name, description, parent_category_id, created_at, updated_at) VALUES
 ('Sewing Supplies', 'Essential items for all your sewing needs, from needles to thread.', NULL, NOW(), NOW()),
 ('Tailoring Tools', 'Professional tools for precise cutting, measuring, and marking in tailoring.', NULL, NOW(), NOW()),
 ('Fabrics', 'A wide selection of fabrics for various projects, including cotton, linen, and denim.', NULL, NOW(), NOW()),
@@ -10,21 +12,21 @@ INSERT INTO categories (name, description, parent_category, created_at, updated_
 -- Add an example subcategory to demonstrate the parent_category field
 -- Assuming 'Fabrics' has a category_id that you can reference.
 -- You might need to replace (SELECT category_id FROM categories WHERE name = 'Fabrics') with the actual ID if needed.
-INSERT INTO categories (name, description, parent_category, created_at, updated_at) VALUES
-('Cotton Blends', 'Various blends of cotton fabric, a subcategory of Fabrics.', (SELECT category_id FROM categories WHERE name = 'Fabrics'), NOW(), NOW());
+INSERT INTO categories (name, description, parent_category_id, created_at, updated_at) VALUES
+('Cotton Blends', 'Various blends of cotton fabric, a subcategory of Fabrics.', 3, NOW(), NOW());
 
 
 -- Assuming category_id values are auto-incremented starting from 1 for the above categories.
 -- You might need to adjust the category_id values if your database handles them differently.
 
 -- Insert Products
-INSERT INTO products (name, description, price, sku, stock_quantity, category_id, is_available, created_at, updated_at) VALUES
+INSERT INTO products (name, description, price, sku, stock_quantity, category_id, is_available, discount, created_at, updated_at) VALUES
 -- Sewing Supplies (assuming category_id = 1)
-('Sewing Needles (assorted sizes)', 'A pack of assorted sewing needles for various fabric types and hand-sewing tasks.', 5.99, 'SSN001', 100, 1, TRUE, NOW(), NOW()),
-('Spools of Thread (various colors)', 'A set of high-quality polyester thread spools in a variety of vibrant colors.', 12.50, 'SST001', 150, 1, TRUE, NOW(), NOW()),
-('Seam Rippers', 'Ergonomic seam rippers for easily removing stitches without damaging fabric.', 3.25, 'SSR001', 75, 1, TRUE, NOW(), NOW()),
-('Thimbles', 'Protective thimbles for comfortable and safe hand-sewing.', 2.00, 'SSTH001', 80, 1, TRUE, NOW(), NOW()),
-('Needle Threaders', 'Handy needle threaders to simplify threading needles.', 1.50, 'SSNT001', 120, 1, TRUE, NOW(), NOW()),
+('Sewing Needles (assorted sizes)', 'A pack of assorted sewing needles for various fabric types and hand-sewing tasks.', 5.99, 'SSN001', 100, 1, TRUE, 50.0, NOW(), NOW()),
+('Spools of Thread (various colors)', 'A set of high-quality polyester thread spools in a variety of vibrant colors.', 12.50, 'SST001', 150, 1, TRUE, 30.0, NOW(), NOW()),
+('Seam Rippers', 'Ergonomic seam rippers for easily removing stitches without damaging fabric.', 3.25, 'SSR001', 75, 1, TRUE, 50.0, NOW(), NOW()),
+('Thimbles', 'Protective thimbles for comfortable and safe hand-sewing.', 2.00, 'SSTH001', 80, 1, TRUE, 20.0, NOW(), NOW()),
+('Needle Threaders', 'Handy needle threaders to simplify threading needles.', 1.50, 'SSNT001', 120, 1, TRUE, 50.0, NOW(), NOW()),
 
 -- Tailoring Tools (assuming category_id = 2)
 ('Fabric Scissors', 'Sharp, durable fabric scissors for clean and precise cuts.', 18.99, 'TTFS001', 60, 2, TRUE, NOW(), NOW()),

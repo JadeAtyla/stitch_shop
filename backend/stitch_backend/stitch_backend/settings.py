@@ -27,30 +27,48 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-# SECURITY WARNING: don"t run with debug turned on in production!
-DEBUG = os.getenv("DEBUG")
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv("DEBUG") # Consider setting this to False in production
 
-ALLOWED_HOSTS = ["*"]
+# ALLOWED_HOSTS for production. For development, "*" is okay.
+ALLOWED_HOSTS = ["*"] # Adjust this in production to your actual domain(s)
 
+# REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        # JWTAuthentication is used for Bearer token in Authorization header
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # SessionAuthentication is generally kept for Django's browsable API or if you use Django sessions
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter", 
+        "rest_framework.filters.SearchFilter",
     ),
+    # Add pagination if you have it defined globally (e.g., in views.py CustomPagination)
+    # "DEFAULT_PAGINATION_CLASS": "api.views.CustomPagination", # Uncomment and adjust path if you have a global pagination class
+    # "PAGE_SIZE": 10, # Example page size if global pagination is used
 }
 
+# Simple JWT settings (standard configuration for tokens in response body)
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1)
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60), # Standard lifetime, adjust as needed
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),   # Standard lifetime, adjust as needed
+    "ROTATE_REFRESH_TOKENS": False,                 # No rotation for localStorage approach
+    "BLACKLIST_AFTER_ROTATION": False,              # No blacklisting unless rotation is true
+    "UPDATE_LAST_LOGIN": False,                     # Typically false for simpler stateless JWT
+
+    # --- REMOVED: Cookie-related settings for JWT ---
+    # "AUTH_COOKIE": "jwt_access_token",
+    # "AUTH_COOKIE_REFRESH": "jwt_refresh_token",
+    # "AUTH_COOKIE_DOMAIN": None,
+    # "AUTH_COOKIE_SECURE": False,
+    # "AUTH_COOKIE_HTTP_ONLY": True,
+    # "AUTH_COOKIE_SAMESITE": "Lax",
+    # "AUTH_COOKIE_PATH": "/",
 }
 
 # Application definition
@@ -62,18 +80,18 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "api",
+    "api", # Assuming your Django app with models, views, etc., is named 'api'
     "rest_framework",
-    "rest_framework_simplejwt.token_blacklist",
-    "corsheaders",
+    "rest_framework_simplejwt.token_blacklist", # Keep this if you want to explicitly blacklist tokens on logout (good practice)
+    "corsheaders", # For handling Cross-Origin Resource Sharing
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware", # Placed early to allow CORS headers
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware", # Keep for browsable API or if SessionAuth is heavily used
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -115,7 +133,7 @@ DATABASES = {
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -155,5 +173,21 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWS_CREDENTIALS = True
+# CORS Headers settings (Crucial for frontend/backend communication)
+CORS_ALLOW_ALL_ORIGINS = True  # Good for development. Set to False in production and specify CORS_ALLOWED_ORIGINS
+CORS_ALLOW_CREDENTIALS = False # <-- IMPORTANT: Set to False as cookies are not primary auth mechanism
+                               #    Keep True ONLY if you need SessionAuthentication for browsable API alongside JWT
+                               #    For pure JWT from localStorage, it's safer to keep this False if not needed.
+
+# If CORS_ALLOW_ALL_ORIGINS is False, define specific origins:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000", # Example for your React frontend development server
+#     "https://yourfrontenddomain.com", # Your production frontend domain
+# ]
+
+# CSRF settings (mostly relevant for SessionAuthentication or forms)
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
+CSRF_COOKIE_SAMESITE = 'Lax'    # Default
+CSRF_COOKIE_SECURE = False      # False for HTTP development, True for HTTPS production
+CSRF_USE_SESSIONS = False
