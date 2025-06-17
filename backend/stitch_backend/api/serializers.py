@@ -6,6 +6,7 @@ from .models import (
     Orders, Payments, CartItems, OrderItems,
     UserRole, AddressType, PaymentMethod, PaymentStatus, OrderStatus
 )
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class AppUserSerializer(serializers.ModelSerializer):
     # The 'user' field will represent the Django User's ID
@@ -52,7 +53,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
 
         # Create corresponding AppUser instance
-        AppUser.objects.create(
+        app_user = AppUser.objects.create( # Store app_user to link shopping cart
             user=user,
             first_name=first_name,
             middle_name=middle_name,
@@ -60,6 +61,11 @@ class UserSerializer(serializers.ModelSerializer):
             phone=phone,
             role=role
         )
+
+        # ALGORITHM: Create a ShoppingCart for the newly registered AppUser
+        # This ensures every new user has an associated shopping cart from the start.
+        ShoppingCarts.objects.create(user=app_user) # Assuming ShoppingCart model requires 'user' foreign key
+
         return user
 
 
@@ -80,11 +86,11 @@ class AddressSerializer(serializers.ModelSerializer):
 
 class ShoppingCartsSerializer(serializers.ModelSerializer):
     # user_email = serializers.CharField(source='user.user.email', read_only=True) # Access Django User's email
-    user_username = serializers.CharField(source='user.user.username', read_only=True)
+    # user_username = serializers.CharField(source='user.user.username', read_only=True)
 
     class Meta:
         model = ShoppingCarts
-        fields = '__all__'
+        fields = ["cart_id"]
 
 class ProductsSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -116,6 +122,8 @@ class OrdersSerializer(serializers.ModelSerializer):
 
 
 class CartItemsSerializer(serializers.ModelSerializer):
+    # Make 'cart' not required for input, as it's set by the view's perform_create
+    cart = serializers.PrimaryKeyRelatedField(queryset=ShoppingCarts.objects.all(), required=False)
     cart_id_display = serializers.IntegerField(source='cart.cart_id', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
@@ -132,3 +140,36 @@ class OrderItemsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItems
         fields = '__all__'
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Customizes the TokenObtainPairSerializer to add user-specific data,
+    including their shopping cart, to the token response.
+    """
+    def validate(self, attrs):
+        # Call the parent class's validate method to get the tokens
+        # This handles authentication and generates 'access' and 'refresh' tokens
+        data = super().validate(attrs)
+
+        # 'self.user' is available here after successful authentication by the parent serializer
+        user = self.user
+
+        # Retrieve the AppUser instance linked to the authenticated Django User
+        try:
+            app_user = AppUser.objects.get(user=user)
+        except AppUser.DoesNotExist:
+            raise serializers.ValidationError("AppUser profile not found for this user.")
+
+        # Fetch the shopping cart for the app_user
+        # Use .first() as filter returns a QuerySet, and we expect one cart per user
+        user_cart = ShoppingCarts.objects.filter(user=app_user).first()
+
+        # Serialize the shopping cart data if found
+        if user_cart:
+            cart_serializer = ShoppingCartsSerializer(user_cart)
+            data['cart'] = cart_serializer.data["cart_id"]
+        else:
+            # Optionally, create a cart if one doesn't exist for the user on login
+            # Or handle this scenario based on your business logic (e.g., return null)
+            data['cart'] = None
+        return data

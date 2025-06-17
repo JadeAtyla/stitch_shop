@@ -42,7 +42,26 @@ DATABASE_PORT='3306'
 DEBUG='True'
 ```
 
-8. Make migrations of your models to your sql:
+8. Delete and Create Database:
+### for Deleting Existing Database
+```bash
+py manage.py obliterate
+```
+or
+```bash
+python manage.py obliterate
+```
+
+### for Creating Database
+```bash
+py manage.py createdb
+```
+or
+```bash
+py manage.py createdb
+```
+
+9. Make migrations of your models to your sql:
 ```bash
 py manage.py makemigrations
 ```
@@ -60,7 +79,15 @@ or
 python manage.py migrate
 ```
 
-10. Create superuser:
+10. Seed categories and products to database:
+```bash
+py manage.py seed
+```
+```bash
+python manage.py seed
+```
+
+11. Create superuser:
 ```bash
 py manage.py createsuperuser
 ```
@@ -69,7 +96,7 @@ or
 python manage.py createsuperuser
 ```
 
-11. Run django server:
+12. Run django server:
 ```bash
 py manage.py runserver
 ```
@@ -78,22 +105,4 @@ or
 python  manage.py runserver
 ```
 
-# Setup your Database First
-1. Open your mysql
-2. Open a query tab and use *stitchshop*:
-```bash
-USE stitchshop;
-```
-3. Copy and paste the content from *backend/insert_products.txt* to the query tab:
-```bash
-USE stitchshop;
-# put here the copied insert data query
-```
-4. Reload django server:
-```bash
-py manage.py runserver
-```
-or
-```bash
-python  manage.py runserver
-```
+# No need sql setup, this django setup seeds all data needed.

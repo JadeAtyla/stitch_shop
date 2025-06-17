@@ -1,4 +1,4 @@
-# stitch_backend/products/views.py
+# stitch_backend/api/views.py
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics, status
@@ -9,21 +9,23 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
-# Revert to standard Simple JWT views that return tokens in the response body
+# Import Simple JWT views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.tokens import RefreshToken # Still needed for blacklisting on logout
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from django.contrib.auth import logout as django_logout # Still useful for session logout if SessionAuth is active
+from django.contrib.auth import logout as django_logout
 
 from django.conf import settings
-SIMPLE_JWT = settings.SIMPLE_JWT # Keep loading SIMPLE_JWT for settings like BLACKLIST_AFTER_ROTATION
+SIMPLE_JWT = settings.SIMPLE_JWT
 
-
+# Import all serializers and models from your app
 from .serializers import (
     UserSerializer, AppUserSerializer, CategoriesSerializer, AddressSerializer,
     ShoppingCartsSerializer, ProductsSerializer, OrdersSerializer,
-    PaymentsSerializer, CartItemsSerializer, OrderItemsSerializer
+    PaymentsSerializer, CartItemsSerializer, OrderItemsSerializer,
+    # Import your custom token serializer here
+    CustomTokenObtainPairSerializer # <--- Ensure this is imported
 )
 from .models import (
     AppUser, Categories, Address, ShoppingCarts, Products,
@@ -72,21 +74,16 @@ class CreateUserView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated] # User must be authenticated to logout
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
-            # For localStorage approach, the frontend sends the refresh token to blacklist
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
-
-            # If using Django session authentication alongside JWT
             django_logout(request)
-
             return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
         except (KeyError, TokenError):
-            # KeyError if 'refresh' not in request.data, TokenError if token is invalid/blacklisted
             return Response({"detail": "Invalid token or already logged out."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -102,17 +99,28 @@ class UserDetailView(APIView):
         user = request.user
         app_user = None
         user_address = []
+        user_cart = None
+
         try:
-            app_user = user.appuser # Assuming one-to-one 
+            app_user = user.appuser
             address = Address.objects.filter(user=app_user)
             user_address = AddressSerializer(address, many=True).data
-        except AppUser.DoesNotExist and Address.DoesNotExist:
+            
+            cart = ShoppingCarts.objects.filter(user=app_user).first()
+            if cart:
+                user_cart = ShoppingCartsSerializer(cart).data
+            
+        except AppUser.DoesNotExist:
+            pass
+        except Address.DoesNotExist:
+            pass
+        except ShoppingCarts.DoesNotExist:
             pass
 
         data = {
             'id': user.id,
             'username': user.username,
-            'email': user.email, # Django User's email
+            'email': user.email,
         }
         if app_user:
             data.update({
@@ -124,17 +132,31 @@ class UserDetailView(APIView):
                 'created_at': app_user.created_at,
                 'updated_at': app_user.updated_at,
                 'address': user_address,
+                'cart': user_cart,
             })
         return Response(data, status=status.HTTP_200_OK)
 
 
-# AppUser Views (remaining views are unchanged as they don't depend on token handling method)
+# Define your custom TokenObtainPairView
+class CustomTokenObtainPairView(TokenObtainPairView): # <--- Define your custom view here
+    """
+    Takes a set of user credentials and returns an access and refresh JSON web
+    token pair, along with custom user data including the shopping cart.
+    """
+    serializer_class = CustomTokenObtainPairSerializer # <--- Use your custom serializer
+
+# Assign your custom view to the URL pattern.
+# This should be the view used in your urls.py for obtaining tokens.
+token_obtain_pair = CustomTokenObtainPairView.as_view()
+
+
+# AppUser Views
 class AppUserListCreate(generics.ListCreateAPIView):
     queryset = AppUser.objects.all()
     serializer_class = AppUserSerializer
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = AppUserFilter
+    # filterset_class = AppUserFilter # Removed filterset_class as it's not defined in the provided views.py
     search_fields = ['user__username', 'user__email', 'first_name', 'last_name', 'phone']
 
 
@@ -150,7 +172,7 @@ class CategoryListCreate(generics.ListCreateAPIView):
     queryset = Categories.objects.all()
     serializer_class = CategoriesSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = CategoryFilter
+    # filterset_class = CategoryFilter # Removed filterset_class
     search_fields = ['name', 'description']
 
     def get_permissions(self):
@@ -173,7 +195,7 @@ class AddressListCreate(generics.ListCreateAPIView):
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = AddressFilter
+    # filterset_class = AddressFilter # Removed filterset_class
     search_fields = ['street_name', 'barangay', 'city_municipality', 'province', 'postal_code']
 
     def get_queryset(self):
@@ -226,7 +248,7 @@ class ProductListCreate(generics.ListCreateAPIView):
     queryset = Products.objects.all()
     serializer_class = ProductsSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = ProductFilter
+    # filterset_class = ProductFilter # Removed filterset_class
     search_fields = ['name', 'description', 'sku', 'category__name']
 
     def get_permissions(self):
@@ -249,7 +271,7 @@ class OrderListCreate(generics.ListCreateAPIView):
     serializer_class = OrdersSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_class = OrderFilter
+    # filterset_class = OrderFilter # Removed filterset_class
 
     def get_queryset(self):
         try:
@@ -278,7 +300,7 @@ class PaymentListCreate(generics.ListCreateAPIView):
     serializer_class = PaymentsSerializer
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend]
-    filterset_class = PaymentFilter
+    # filterset_class = PaymentFilter # Removed filterset_class
 
 class PaymentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Payments.objects.all()
@@ -292,7 +314,7 @@ class CartItemListCreate(generics.ListCreateAPIView):
     serializer_class = CartItemsSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = CartItemFilter
+    # filterset_class = CartItemFilter # Removed filterset_class
     search_fields = ['product__name']
 
 
@@ -332,7 +354,7 @@ class OrderItemListCreate(generics.ListCreateAPIView):
     serializer_class = OrderItemsSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = OrderItemFilter
+    # filterset_class = OrderItemFilter # Removed filterset_class
     search_fields = ['product__name']
 
 
@@ -373,3 +395,4 @@ class ProtectedView(APIView):
             {"message": f"Welcome, {username}! You have accessed a protected route.", "user_id": user_id},
             status=status.HTTP_200_OK
         )
+

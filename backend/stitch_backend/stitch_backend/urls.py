@@ -26,6 +26,7 @@ from api.views import ( # Assuming your app's views are in 'api'
     ProtectedView,
     UserDetailView, # For getting current user's details (still useful)
     LogoutView,     # Your custom LogoutView is still needed for blacklisting
+    CustomTokenObtainPairView,
 )
 
 urlpatterns = [
@@ -33,7 +34,7 @@ urlpatterns = [
     # Authentication
     path("api/auth/register/", CreateUserView.as_view(), name="register"),
     # Use standard Simple JWT views for token obtain and refresh
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="get_token"),
+    path("api/auth/token/", CustomTokenObtainPairView.as_view(), name="get_token"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="refresh_token"),
     path("api/auth/logout/", LogoutView.as_view(), name="logout"), # Keep your LogoutView for blacklisting
     path("api/auth/me/", UserDetailView.as_view(), name="user_details"), # Keep for getting current user details
